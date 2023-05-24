@@ -29,6 +29,7 @@ class DatabaseException extends ActiveRecordException
 {
 	public function __construct($adapter_or_string_or_mystery)
 	{
+		$this->error = ($adapter_or_string_or_mystery->message);
 		if ($adapter_or_string_or_mystery instanceof Connection)
 		{
 			parent::__construct(
@@ -94,7 +95,11 @@ class UndefinedPropertyException extends ModelException
 			$this->message = implode("\r\n", $property_name);
 			return;
 		}
-
+		
+		$this->file = $this->file;
+		$this->line = $this->line;
+		$this->class = $class_name;
+		$this->property = $property_name;
 		$this->message = "Undefined property: {$class_name}->{$property_name} in {$this->file} on line {$this->line}";
 		parent::__construct();
 	}

@@ -76,7 +76,7 @@ abstract class Inflector
 	 * @param string $s string to convert
 	 * @return string
 	 */
-	public function uncamelize($s)
+	public static function uncamelize($s)
 	{
 		$normalized = '';
 

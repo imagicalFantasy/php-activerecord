@@ -18,6 +18,7 @@ class Column
 	const DATETIME	= 4;
 	const DATE		= 5;
 	const TIME		= 6;
+	const BOOLEAN	= 7;
 
 	/**
 	 * Map a type to an column type.
@@ -29,6 +30,8 @@ class Column
 		'timestamp'	=> self::DATETIME,
 		'date'		=> self::DATE,
 		'time'		=> self::TIME,
+
+		'boolean'	=> self::BOOLEAN,
 
 		'tinyint'	=> self::INTEGER,
 		'smallint'	=> self::INTEGER,
@@ -130,7 +133,7 @@ class Column
 
 		// If adding 0 to a string causes a float conversion,
 		// we have a number over PHP_INT_MAX
-		elseif (is_string($value) && is_float($value + 0))
+		elseif (is_string($value) && is_float((float) $value))
 			return (string) $value;
 
 		// If a float was passed and its greater than PHP_INT_MAX
@@ -160,22 +163,17 @@ class Column
 			case self::STRING:	return (string)$value;
 			case self::INTEGER:	return static::castIntegerSafely($value);
 			case self::DECIMAL:	return (double)$value;
+			case self::BOOLEAN:	return $connection->boolean_to_string($value);
 			case self::DATETIME:
 			case self::DATE:
 				if (!$value)
 					return null;
 
-				$date_class = Config::instance()->get_date_class();
-
-				if ($value instanceof $date_class)
+				if ($value instanceof DateTime)
 					return $value;
 
 				if ($value instanceof \DateTime)
-					return $date_class::createFromFormat(
-						Connection::DATETIME_TRANSLATE_FORMAT,
-						$value->format(Connection::DATETIME_TRANSLATE_FORMAT),
-						$value->getTimezone()
-					);
+					return new DateTime($value->format('Y-m-d H:i:s T'));
 
 				return $connection->string_to_datetime($value);
 		}

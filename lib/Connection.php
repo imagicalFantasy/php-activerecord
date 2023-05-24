@@ -21,17 +21,6 @@ abstract class Connection
 {
 
 	/**
-	 * The DateTime format to use when translating other DateTime-compatible objects.
-	 *
-	 * NOTE!: The DateTime "format" used must not include a time-zone (name, abbreviation, etc) or offset.
-	 * Including one will cause PHP to ignore the passed in time-zone in the 3rd argument.
-	 * See bug: https://bugs.php.net/bug.php?id=61022
-	 *
-	 * @var string
-	 */
-	const DATETIME_TRANSLATE_FORMAT = 'Y-m-d\TH:i:s';
-
-	/**
 	 * The PDO connection object.
 	 * @var mixed
 	 */
@@ -40,7 +29,12 @@ abstract class Connection
 	 * The last query run.
 	 * @var string
 	 */
-	public $last_query;
+	static $last_query;
+	/**
+	 * The last query run.
+	 * @var string
+	 */
+	static $count_query = 0;
 	/**
 	 * Switch for logging.
 	 *
@@ -312,13 +306,28 @@ abstract class Connection
 	 */
 	public function query($sql, &$values=array())
 	{
+		perfoTime('query');
 		if ($this->logging)
 		{
 			$this->logger->log($sql);
 			if ( $values ) $this->logger->log($values);
 		}
 
-		$this->last_query = $sql;
+		global $siteVar;
+		if ($siteVar && $siteVar['Env'] == 'dev') {
+			self::$count_query++;
+			self::$last_query = $sql;
+			if ($_REQUEST['debug_sql']) {
+				var_dump(str_replace_patch_array('?', $values, $sql));
+
+				if ($_REQUEST['debug_sql'] == 2) {
+					$debugStack = debug_backtrace();
+					foreach ($debugStack as $debugLine) {
+						echo '<div>' . $debugLine['file'] . ' <strong>' . $debugLine['line'] . ' ' . $debugLine['function'] . '</strong></div>';
+					}
+				}
+			}
+		}
 
 		try {
 			if (!($sth = $this->connection->prepare($sql)))
@@ -335,6 +344,7 @@ abstract class Connection
 		} catch (PDOException $e) {
 			throw new DatabaseException($e);
 		}
+		perfoTime('query');
 		return $sth;
 	}
 
@@ -480,7 +490,7 @@ abstract class Connection
 	 * Converts a string representation of a datetime into a DateTime object.
 	 *
 	 * @param string $string A datetime in the form accepted by date_create()
-	 * @return object The date_class set in Config
+	 * @return DateTime
 	 */
 	public function string_to_datetime($string)
 	{
@@ -490,13 +500,23 @@ abstract class Connection
 		if ($errors['warning_count'] > 0 || $errors['error_count'] > 0)
 			return null;
 
-		$date_class = Config::instance()->get_date_class();
+		return new DateTime($date->format(static::$datetime_format));
+	}
 
-		return $date_class::createFromFormat(
-			static::DATETIME_TRANSLATE_FORMAT,
-			$date->format(static::DATETIME_TRANSLATE_FORMAT),
-			$date->getTimezone()
-		);
+	/**
+	 * Converts a boolean value to a string representation.
+	 *
+	 * The converted string representation should be in a format acceptable by the
+	 * underlying database connection.
+	 *
+	 * @param mixed $value
+	 * @access public
+	 * @return string
+	 */
+	public function boolean_to_string($value)
+	{
+		$boolean = (boolean)$value;
+		return (string)$boolean;
 	}
 
 	/**

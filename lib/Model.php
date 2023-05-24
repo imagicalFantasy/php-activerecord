@@ -85,7 +85,7 @@ class Model
 	 *
 	 * @var array
 	 */
-	private $attributes = array();
+	public $attributes = array();
 
 	/**
 	 * Flag whether or not this model's attributes have been modified since it will either be null or an array of column_names that have been modified
@@ -154,16 +154,14 @@ class Model
 	static $sequence;
 
 	/**
-	 * Set this to true in your subclass to use caching for this model.
-	 * Note that you must also configure a cache object.
+	 * Set this to true in your subclass to use caching for this model. Note that you must also configure a cache object.
 	 */
 	static $cache = false;
 
 	/**
-	 * Set this to specify an expiration period for this model.
-	 * If not set, the expire value you set in your cache options will be used.
+	 * Set this to specify an expiration period for this model. If not set, the expire value you set in your cache options will be used.
 	 *
-	 * @var integer
+	 * @var number
 	 */
 	static $cache_expire;
 
@@ -415,20 +413,24 @@ class Model
 
 		elseif (method_exists($this,"set_$name"))
 		{
-			$name = "set_$name";
-			return $this->$name($value);
+			$name_method = "set_$name";
+			$name = str_replace('_id', '', $name);
+			if (array_key_exists($name, $this->__relationships)) {
+				unset($this->__relationships[$name]);
+			}
+			return $this->$name_method($value);
 		}
 
 		if (array_key_exists($name,$this->attributes))
 			return $this->assign_attribute($name,$value);
 
 		if ($name == 'id')
-			return $this->assign_attribute($this->get_primary_key(true),$value);
+			return $this->assign_attribute($this::get_primary_key(true),$value);
 
 		foreach (static::$delegate as &$item)
 		{
 			if (($delegated_name = $this->is_delegated($name,$item)))
-				return $this->{$item['to']}->{$delegated_name} = $value;
+				return $this->$item['to']->$delegated_name = $value;
 		}
 
 		throw new UndefinedPropertyException(get_called_class(),$name);
@@ -450,7 +452,10 @@ class Model
 	public function assign_attribute($name, $value)
 	{
 		$table = static::table();
-		if (!is_object($value)) {
+		if (is_array($value)) {
+			$value = json_encode($value);
+		}
+		else if (!is_object($value)) {
 			if (array_key_exists($name, $table->columns)) {
 				$value = $table->columns[$name]->cast($value, static::connection());
 			} else {
@@ -462,19 +467,12 @@ class Model
 		}
 
 		// convert php's \DateTime to ours
-		if ($value instanceof \DateTime) {
-			$date_class = Config::instance()->get_date_class();
-			if (!($value instanceof $date_class))
-				$value = $date_class::createFromFormat(
-					Connection::DATETIME_TRANSLATE_FORMAT,
-					$value->format(Connection::DATETIME_TRANSLATE_FORMAT),
-					$value->getTimezone()
-				);
-		}
+		if ($value instanceof \DateTime)
+			$value = new DateTime($value->format('Y-m-d H:i:s T'));
 
-		if ($value instanceof DateTimeInterface)
-			// Tell the Date object that it's associated with this model and attribute. This is so it
-			// has the ability to flag this model as dirty if a field in the Date object changes.
+		// make sure DateTime values know what model they belong to so
+		// dirty stuff works when calling set methods on the DateTime object
+		if ($value instanceof DateTime)
 			$value->attribute_of($this,$name);
 
 		$this->attributes[$name] = $value;
@@ -516,7 +514,7 @@ class Model
 
 		if ($name == 'id')
 		{
-			$pk = $this->get_primary_key(true);
+			$pk = $this::get_primary_key(true);
 			if (isset($this->attributes[$pk]))
 				return $this->attributes[$pk];
 		}
@@ -537,6 +535,10 @@ class Model
 				else
 					return $null;
 			}
+		}
+
+		if ($name == 'id') {
+			return $null;
 		}
 
 		throw new UndefinedPropertyException(get_called_class(),$name);
@@ -595,7 +597,7 @@ class Model
 	 * @param boolean Set to true to return the first value in the pk array only
 	 * @return string The primary key for the model
 	 */
-	public function get_primary_key($first=false)
+	public static function get_primary_key($first=false)
 	{
 		$pk = static::table()->pk;
 		return $first ? $pk[0] : $pk;
@@ -818,7 +820,7 @@ class Model
 		if (!($attributes = $this->dirty_attributes()))
 			$attributes = $this->attributes;
 
-		$pk = $this->get_primary_key(true);
+		$pk = $this::get_primary_key(true);
 		$use_sequence = false;
 
 		if ($table->sequence && !isset($attributes[$pk]))
@@ -855,7 +857,8 @@ class Model
 
 		$this->__new_record = false;
 		$this->invoke_callback('after_create',false);
-		$this->expire_cache();
+
+		$this->update_cache();
 		return true;
 	}
 
@@ -886,18 +889,17 @@ class Model
 			$dirty = $this->dirty_attributes();
 			static::table()->update($dirty,$pk);
 			$this->invoke_callback('after_update',false);
-			$this->expire_cache();
+			$this->update_cache();
 		}
 
 		return true;
 	}
 
-	protected function expire_cache()
+	protected function update_cache()
 	{
 		$table = static::table();
-		if($table->cache_individual_model)
-		{
-			Cache::delete($this->cache_key());
+		if($table->cache_individual_model){
+			Cache::set($this->cache_key(), $this, $table->cache_model_expire);
 		}
 	}
 
@@ -1041,9 +1043,18 @@ class Model
 
 		static::table()->delete($pk);
 		$this->invoke_callback('after_destroy',false);
-		$this->expire_cache();
+		$this->remove_from_cache();
 
 		return true;
+	}
+
+	public function remove_from_cache()
+	{
+		$table = static::table();
+		if($table->cache_individual_model)
+		{
+			Cache::delete($this->cache_key());
+		}
 	}
 
 	/**
@@ -1279,10 +1290,11 @@ class Model
 	 */
 	public function reload()
 	{
-		$this->__relationships = array();
-		$pk = array_values($this->get_values_for($this->get_primary_key()));
+		$this->remove_from_cache();
 
-		$this->expire_cache();
+		$this->__relationships = array();
+		$pk = array_values($this->get_values_for($this::get_primary_key()));
+
 		$this->set_attributes_via_mass_assignment($this->find($pk)->attributes, false);
 		$this->reset_dirty();
 
@@ -1437,6 +1449,49 @@ class Model
 	}
 
 	/**
+	 * Get a aggregated of qualifying records.
+	 *
+	 * <code>
+	 * YourModel::count(array('conditions' => 'amount > 3.14159265'));
+	 * </code>
+	 *
+	 * @see find
+	 * @return int Number of records that matched the query
+	 */
+	public static function aggregate(/* ... */)
+	{
+		$args = func_get_args();
+		$options = static::extract_and_validate_options($args);
+		// if (!is_string($args[0])) $args = $args[0][0];
+		$args[0] = strtoupper($args[0]);
+		if (!in_array($args[0], ['COUNT', 'SUM', 'AVR', 'MIN', 'MAX'])) return false;
+		if ($args[1]) {
+			if (is_array($args[1])) {
+				$args[2] = $args[1];
+				$args[1] = '*';
+			}
+		}
+		else {
+			$args[1] = '*';
+		}
+
+		$options['select'] = $args[0].'(`'.$args[1].'`)';
+
+		if (!empty($args) && !is_null($args[2]) && !empty($args[0]))
+		{
+			if (is_hash($args[2]))
+				$options['conditions'] = $args[2];
+			//else
+			//	$options['conditions'] = call_user_func_array('static::pk_conditions',$args);
+		}
+
+		$table = static::table();
+		$sql = $table->options_to_sql($options);
+		$values = $sql->get_where_values();
+		return static::connection()->query_and_fetch_one($sql->to_s(),$values);
+	}
+
+	/**
 	 * Get a count of qualifying records.
 	 *
 	 * <code>
@@ -1446,25 +1501,19 @@ class Model
 	 * @see find
 	 * @return int Number of records that matched the query
 	 */
-	public static function count(/* ... */)
+	public static function count($conditions = array())
 	{
+        return static::aggregate('COUNT', static::table()->pk[0], $conditions);
+		/*
 		$args = func_get_args();
-		$options = static::extract_and_validate_options($args);
-		$options['select'] = 'COUNT(*)';
-
-		if (!empty($args) && !is_null($args[0]) && !empty($args[0]))
-		{
-			if (is_hash($args[0]))
-				$options['conditions'] = $args[0];
-			else
-				$options['conditions'] = call_user_func_array('static::pk_conditions',$args);
-		}
-
-		$table = static::table();
-		$sql = $table->options_to_sql($options);
-		$values = $sql->get_where_values();
-		return static::connection()->query_and_fetch_one($sql->to_s(),$values);
+		array_unshift($args, ['COUNT', '*']);
+		return static::aggregate($args);
+		*/
 	}
+
+	public static function sum($column, $conditions = array()) {
+        return static::aggregate('SUM', $column, $conditions);
+    }
 
 	/**
 	 * Determine if a record exists.
@@ -1613,22 +1662,17 @@ class Model
 	/**
 	 * Will look up a list of primary keys from cache
 	 *
-	 * @param mixed $pks primary keys
+	 * @param array $pks An array of primary keys
 	 * @return array
 	 */
-	protected static function get_models_from_cache($pks, $options)
+	protected static function get_models_from_cache(array $pks)
 	{
 		$models = array();
 		$table = static::table();
 
-		if(!is_array($pks))
-		{
-			$pks = array($pks);
-		}
-
 		foreach($pks as $pk)
 		{
-			$options['conditions'] = static::pk_conditions($pk);
+			$options =array('conditions' => static::pk_conditions($pk));
 			$models[] = Cache::get($table->cache_key_for_model($pk), function() use ($table, $options)
 			{
 				$res = $table->find($options);
@@ -1658,7 +1702,8 @@ class Model
 
 		if($table->cache_individual_model)
 		{
-			$list = static::get_models_from_cache($values, $options);
+			$pks = is_array($values) ? $values : array($values);
+			$list = static::get_models_from_cache($pks);
 		}
 		else
 		{
@@ -1667,7 +1712,7 @@ class Model
 		}
 		$results = count($list);
 
-		if ($results != ($expected = count($values)))
+		if ($results != ($expected = count((array) $values)))
 		{
 			$class = get_called_class();
 			if (is_array($values))
@@ -1866,7 +1911,7 @@ class Model
 	 */
 	private function serialize($type, $options)
 	{
-		require_once 'Serialization.php';
+		//require_once 'Serialization.php';
 		$class = "ActiveRecord\\{$type}Serializer";
 		$serializer = new $class($this, $options);
 		return $serializer->to_s();
@@ -1937,5 +1982,39 @@ class Model
 			throw $e;
 		}
 		return true;
+	}
+
+	public function dublicate() {
+		$manyRef = [];
+		$fields = static::fields();
+		foreach ($fields as $field) {
+			if ($field['class'] == 'HasMany') {
+				$fieldName = $field['name'];
+				$manyRef[$fieldName] = $this->$fieldName;
+			}
+		}
+
+		$pk = $this::get_primary_key(true);
+		$this->__new_record = true;
+		$this->$pk = null;
+
+		foreach ($this->attributes as $name => $value) {
+			$this->assign_attribute($name, $value);
+		}
+		$this->save();
+		$this->reload();
+
+		foreach ($fields as $field) {
+			if ($field['class'] == 'HasMany') {
+				$fieldName = $field['name'];
+				$fieldNameRel = $field['column'];
+				$childs = $manyRef[$fieldName];
+				foreach ($childs as $child) {
+					$child->dublicate();
+					$child->$fieldNameRel = $this->$pk;
+					$child->save();
+				}
+			}
+		}
 	}
 }

@@ -73,14 +73,6 @@ class Config extends Singleton
 	private $logger;
 
 	/**
-	 * Contains the class name for the Date class to use. Must have a public format() method and a
-	 * public static createFromFormat($format, $time) method
-	 *
-	 * @var string
-	 */
-	private $date_class = 'ActiveRecord\\DateTime';
-
-	/**
 	 * The format to serialize DateTime values into.
 	 *
 	 * @var string
@@ -270,28 +262,6 @@ class Config extends Singleton
 		return $this->logger;
 	}
 
-	public function set_date_class($date_class)
-	{
-		try {
-			$klass = Reflections::instance()->add($date_class)->get($date_class);
-		} catch (\ReflectionException $e) {
-			throw new ConfigException("Cannot find date class");
-		}
-
-		if (!$klass->hasMethod('format') || !$klass->getMethod('format')->isPublic())
-			throw new ConfigException('Given date class must have a "public format($format = null)" method');
-
-		if (!$klass->hasMethod('createFromFormat') || !$klass->getMethod('createFromFormat')->isPublic())
-			throw new ConfigException('Given date class must have a "public static createFromFormat($format, $time)" method');
-
-		$this->date_class = $date_class;
-	}
-
-	public function get_date_class()
-	{
-		return $this->date_class;
-	}
-
 	/**
 	 * @deprecated
 	 */
@@ -329,5 +299,17 @@ class Config extends Singleton
 	public function set_cache($url, $options=array())
 	{
 		Cache::initialize($url,$options);
+	}
+
+	/**
+	 * Sets the prefix for all tables
+	 *
+	 * @param object $logger
+	 * @return void
+	 * @throws ConfigException if Logger objecct does not implement public log()
+	 */
+	public static function set_prefix($prefix)
+	{
+		Table::$prefix = $prefix;
 	}
 }

@@ -15,6 +15,7 @@ namespace ActiveRecord;
  */
 class Table
 {
+	public static $prefix = '';
 	private static $cache = array();
 
 	public $class;
@@ -60,7 +61,7 @@ class Table
 	/**
 	 * List of relationships for this table.
 	 */
-	private $relationships = array();
+	public $relationships = array();
 
 	public static function load($model_class_name)
 	{
@@ -286,7 +287,7 @@ class Table
 			// nested include
 			if (is_array($name))
 			{
-				$nested_includes = count($name) > 0 ? $name : array();
+				$nested_includes = count($name) > 0 ? $name : $name[0];
 				$name = $index;
 			}
 			else
@@ -355,7 +356,7 @@ class Table
 		$sql = new SQLBuilder($this->conn,$this->get_fully_qualified_table_name());
 		$sql->insert($data,$pk,$sequence_name);
 
-		$values = array_values($data);
+		$values = array_flatten(array_values($data));
 		return $this->conn->query(($this->last_sql = $sql->to_s()),$values);
 	}
 
@@ -428,10 +429,9 @@ class Table
 		if (!$hash)
 			return $hash;
 
-		$date_class = Config::instance()->get_date_class();
 		foreach ($hash as $name => &$value)
 		{
-			if ($value instanceof $date_class || $value instanceof \DateTime)
+			if ($value instanceof \DateTime)
 			{
 				if (isset($this->columns[$name]) && $this->columns[$name]->type == Column::DATE)
 					$hash[$name] = $this->conn->date_to_string($value);
@@ -463,7 +463,7 @@ class Table
 	private function set_table_name()
 	{
 		if (($table = $this->class->getStaticPropertyValue('table',null)) || ($table = $this->class->getStaticPropertyValue('table_name',null)))
-			$this->table = $table;
+			$this->table = self::$prefix.$table;
 		else
 		{
 			// infer table name from the class name
@@ -517,7 +517,7 @@ class Table
 			foreach (wrap_strings_in_arrays($definitions) as $definition)
 			{
 				$relationship = null;
-				$definition += array('namespace' => $namespace);
+				$definition += compact('namespace');
 
 				switch ($name)
 				{

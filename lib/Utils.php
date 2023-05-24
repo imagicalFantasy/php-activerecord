@@ -54,6 +54,9 @@ function array_flatten(array $array)
 	{
 		if (is_array($array[$i]))
 			array_splice($array,$i,1,$array[$i]);
+		else if (is_object($array[$i])) {
+			$array[$i] = json_encode($array[$i]);
+		}
 		else
 			++$i;
 	}
@@ -195,7 +198,7 @@ class Utils
 	{
 		$inflector = Inflector::instance();
 		$inflected = $inflector->variablize($attr);
-		$normal = $inflector->uncamelize($inflected);
+		$normal = $inflector::uncamelize($inflected);
 
 		return ucfirst(str_replace('_', ' ', $normal));
 	}
@@ -239,7 +242,7 @@ class Utils
         '/(bu)s$/i'                => "$1ses",
         '/(alias)$/i'              => "$1es",
         '/(octop)us$/i'            => "$1i",
-        '/(cris|ax|test)is$/i'     => "$1es",
+        '/(ax|test)is$/i'          => "$1es",
         '/(us)$/i'                 => "$1es",
         '/s$/i'                    => "s",
         '/$/'                      => "s"

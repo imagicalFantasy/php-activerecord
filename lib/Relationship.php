@@ -76,6 +76,7 @@ abstract class AbstractRelationship implements InterfaceRelationship
 	{
 		$this->attribute_name = $options[0];
 		$this->options = $this->merge_association_options($options);
+		$this->follow = ($options['follow']===false)?false:true;
 
 		$relationship = strtolower(denamespace(get_called_class()));
 
@@ -205,11 +206,11 @@ abstract class AbstractRelationship implements InterfaceRelationship
 						$model->set_relationship_from_eager_load($related, $this->attribute_name);
 
 					$used_models_map[$hash] = true;
-				}
+			}
 			} else {
 				$model->set_relationship_from_eager_load(null, $this->attribute_name);
-			}
 		}
+	}
 	}
 
 	/**
@@ -291,7 +292,7 @@ abstract class AbstractRelationship implements InterfaceRelationship
 		if (!has_absolute_namespace($class_name) && isset($this->options['namespace'])) {
 			$class_name = $this->options['namespace'].'\\'.$class_name;
 		}
-		
+
 		$reflection = Reflections::instance()->add($class_name)->get($class_name);
 
 		if (!$reflection->isSubClassOf('ActiveRecord\\Model'))
@@ -446,7 +447,7 @@ class HasMany extends AbstractRelationship
 	protected $primary_key;
 
 	private $has_one = false;
-	private $through;
+	public $through;
 
 	/**
 	 * Constructs a {@link HasMany} relationship.
