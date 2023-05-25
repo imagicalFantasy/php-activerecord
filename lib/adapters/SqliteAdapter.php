@@ -2,7 +2,14 @@
 /**
  * @package ActiveRecord
  */
-namespace ActiveRecord;
+ namespace ActiveRecord\Adapters;
+
+ use ActiveRecord\Connection;
+ use ActiveRecord\Column;
+ use ActiveRecord\Inflector;
+ use ActiveRecord\DatabaseException;
+ use ActiveRecord\ActiveRecordException;
+ use ActiveRecord\Utils;
 
 use PDO;
 

@@ -2,11 +2,15 @@
 /**
  * @package ActiveRecord
  */
-namespace ActiveRecord;
+namespace ActiveRecord\Adapters;
+
+use ActiveRecord\Connection;
+use ActiveRecord\Column;
+use ActiveRecord\Inflector;
 
 /**
  * Adapter for Postgres (not completed yet)
- * 
+ *
  * @package ActiveRecord
  */
 class PgsqlAdapter extends Connection
@@ -47,7 +51,7 @@ SELECT
         WHERE c.oid = pg_index.indrelid
         AND a.attnum = ANY (pg_index.indkey)
         AND pg_index.indisprimary = 't'
-      ) IS NOT NULL AS pk,      
+      ) IS NOT NULL AS pk,
       REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE((SELECT pg_attrdef.adsrc
         FROM pg_attrdef
         WHERE c.oid = pg_attrdef.adrelid
