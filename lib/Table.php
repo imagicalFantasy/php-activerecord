@@ -177,7 +177,7 @@ class Table
 
 		if (array_key_exists('conditions',$options))
 		{
-			if (!is_hash($options['conditions']))
+			if (!Utils::is_hash($options['conditions']))
 			{
 				if (is_string($options['conditions']))
 					$options['conditions'] = array($options['conditions']);
@@ -356,7 +356,7 @@ class Table
 		$sql = new SQLBuilder($this->conn,$this->get_fully_qualified_table_name());
 		$sql->insert($data,$pk,$sequence_name);
 
-		$values = array_flatten(array_values($data));
+		$values = Utils::array_flatten(array_values($data));
 		return $this->conn->query(($this->last_sql = $sql->to_s()),$values);
 	}
 
@@ -513,7 +513,7 @@ class Table
 			if (!$definitions)# || !is_array($definitions))
 				continue;
 
-			foreach (wrap_strings_in_arrays($definitions) as $definition)
+			foreach (Utils::wrap_strings_in_arrays($definitions) as $definition)
 			{
 				$relationship = null;
 				$definition += compact('namespace');

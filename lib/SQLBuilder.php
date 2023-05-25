@@ -85,7 +85,7 @@ class SQLBuilder
 		if ($this->get_where_values())
 			$ret = array_merge($ret,$this->get_where_values());
 
-		return array_flatten($ret);
+		return Utils::array_flatten($ret);
 	}
 
 	public function get_where_values()
@@ -144,7 +144,7 @@ class SQLBuilder
 
 	public function insert($hash, $pk=null, $sequence_name=null)
 	{
-		if (!is_hash($hash))
+		if (!Utils::is_hash($hash))
 			throw new ActiveRecordException('Inserting requires a hash.');
 
 		$this->operation = 'INSERT';
@@ -160,7 +160,7 @@ class SQLBuilder
 	{
 		$this->operation = 'UPDATE';
 
-		if (is_hash($mixed))
+		if (Utils::is_hash($mixed))
 			$this->data = $mixed;
 		elseif (is_string($mixed))
 			$this->update = $mixed;
@@ -293,12 +293,12 @@ class SQLBuilder
 	{
 		$num_args = count($args);
 
-		if ($num_args == 1 && is_hash($args[0]))
+		if ($num_args == 1 && Utils::is_hash($args[0]))
 		{
 			$hash = is_null($this->joins) ? $args[0] : $this->prepend_table_name_to_fields($args[0]);
 			$e = new Expressions($this->connection,$hash);
 			$this->where = $e->to_s();
-			$this->where_values = array_flatten($e->values());
+			$this->where_values = Utils::array_flatten($e->values());
 		}
 		elseif ($num_args > 0)
 		{
@@ -312,7 +312,7 @@ class SQLBuilder
 					$e = new Expressions($this->connection,$args[0]);
 					$e->bind_values($values);
 					$this->where = $e->to_s();
-					$this->where_values = array_flatten($e->values());
+					$this->where_values = Utils::array_flatten($e->values());
 					return;
 				}
 			}

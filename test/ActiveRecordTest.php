@@ -24,7 +24,7 @@ class ActiveRecordTest extends DatabaseTest
 		$this->assert_false(Author::is_options_hash(array('conditions' => 'blah', 'sharks' => 'laserz', 'dubya' => 'bush')));
 	}
 
-	public function test_options_is_hash()
+	public function test_options_Utils::is_hash()
 	{
 		$this->assert_true(Author::is_options_hash($this->options));
 	}

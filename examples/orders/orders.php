@@ -36,7 +36,7 @@ $pokemon->create_payments(array('amount' => 2.50, 'person_id' => $jax->id));
 // reload since we don't want the freebie to show up (because it failed validation)
 $tito->reload();
 
-echo "$tito->name has " . count($tito->orders) . " orders for: " . join(', ',ActiveRecord\collect($tito->orders,'item_name')) . "\n\n";
+echo "$tito->name has " . count($tito->orders) . " orders for: " . join(', ',Utils::collect($tito->orders,'item_name')) . "\n\n";
 
 // get all orders placed by Tito
 foreach (Order::find_all_by_person_id($tito->id) as $order)
@@ -63,7 +63,7 @@ $conditions = array(
 foreach (Person::all($conditions) as $person)
 {
 	$n = count($person->payments);
-	$total = array_sum(ActiveRecord\collect($person->payments,'amount'));
+	$total = array_sum(Utils::collect($person->payments,'amount'));
 	echo "$person->name made $n payments for a total of $$total\n\n";
 }
 

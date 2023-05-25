@@ -298,7 +298,7 @@ class AdapterTest extends DatabaseTest
 		$ret = array();
 		$sql = 'SELECT * FROM authors ORDER BY name ASC';
 		$this->conn->query_and_fetch($this->conn->limit($sql,$offset,$limit),function($row) use (&$ret) { $ret[] = $row; });
-		return ActiveRecord\collect($ret,'author_id');
+		return Utils::collect($ret,'author_id');
 	}
 
 	public function test_limit()

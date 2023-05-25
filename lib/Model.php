@@ -949,7 +949,7 @@ class Model
 
 		$conditions = is_array($options) ? $options['conditions'] : $options;
 
-		if (is_array($conditions) && !is_hash($conditions))
+		if (is_array($conditions) && !Utils::is_hash($conditions))
 			call_user_func_array(array($sql, 'delete'), $conditions);
 		else
 			$sql->delete($conditions);
@@ -1004,7 +1004,7 @@ class Model
 
 		if (isset($options['conditions']) && ($conditions = $options['conditions']))
 		{
-			if (is_array($conditions) && !is_hash($conditions))
+			if (is_array($conditions) && !Utils::is_hash($conditions))
 				call_user_func_array(array($sql, 'where'), $conditions);
 			else
 				$sql->where($conditions);
@@ -1475,7 +1475,7 @@ class Model
 
 		if (!empty($args) && !is_null($args[2]) && !empty($args[0]))
 		{
-			if (is_hash($args[2]))
+			if (Utils::is_hash($args[2]))
 				$options['conditions'] = $args[2];
 			//else
 			//	$options['conditions'] = call_user_func_array('static::pk_conditions',$args);
@@ -1763,7 +1763,7 @@ class Model
 	 */
 	public static function is_options_hash($array, $throw=true)
 	{
-		if (is_hash($array))
+		if (Utils::is_hash($array))
 		{
 			$keys = array_keys($array);
 			$diff = array_diff($keys,self::$VALID_OPTIONS);
@@ -1818,7 +1818,7 @@ class Model
 			}
 			catch (ActiveRecordException $e)
 			{
-				if (!is_hash($last))
+				if (!Utils::is_hash($last))
 					throw $e;
 
 				$options = array('conditions' => $last);

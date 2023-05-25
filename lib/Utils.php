@@ -36,134 +36,6 @@ namespace ActiveRecord;
 
 use \Closure;
 
-function classify($class_name, $singularize=false)
-{
-	if ($singularize)
-    $class_name = Utils::singularize($class_name);
-
-	$class_name = Inflector::instance()->camelize($class_name);
-	return ucfirst($class_name);
-}
-
-// http://snippets.dzone.com/posts/show/4660
-function array_flatten(array $array)
-{
-	$i = 0;
-
-	while ($i < count($array))
-	{
-		if (is_array($array[$i]))
-			array_splice($array,$i,1,$array[$i]);
-		else if (is_object($array[$i])) {
-			$array[$i] = json_encode($array[$i]);
-		}
-		else
-			++$i;
-	}
-	return $array;
-}
-
-/**
- * Somewhat naive way to determine if an array is a hash.
- */
-function is_hash(&$array)
-{
-	if (!is_array($array))
-		return false;
-
-	$keys = array_keys($array);
-	return @is_string($keys[0]) ? true : false;
-}
-
-/**
- * Strips a class name of any namespaces and namespace operator.
- *
- * @param string $class
- * @return string stripped class name
- * @access public
- */
-function denamespace($class_name)
-{
-	if (is_object($class_name))
-		$class_name = get_class($class_name);
-
-	if (has_namespace($class_name))
-	{
-		$parts = explode('\\', $class_name);
-		return end($parts);
-	}
-	return $class_name;
-}
-
-function get_namespaces($class_name)
-{
-	if (has_namespace($class_name))
-		return explode('\\', $class_name);
-	return null;
-}
-
-function has_namespace($class_name)
-{
-	if (strpos($class_name, '\\') !== false)
-		return true;
-	return false;
-}
-
-function has_absolute_namespace($class_name)
-{
-	if (strpos($class_name, '\\') === 0)
-		return true;
-	return false;
-}
-
-/**
- * Returns true if all values in $haystack === $needle
- * @param $needle
- * @param $haystack
- * @return unknown_type
- */
-function all($needle, array $haystack)
-{
-	foreach ($haystack as $value)
-	{
-		if ($value !== $needle)
-			return false;
-	}
-	return true;
-}
-
-function collect(&$enumerable, $name_or_closure)
-{
-	$ret = array();
-
-	foreach ($enumerable as $value)
-	{
-		if (is_string($name_or_closure))
-			$ret[] = is_array($value) ? $value[$name_or_closure] : $value->$name_or_closure;
-		elseif ($name_or_closure instanceof Closure)
-			$ret[] = $name_or_closure($value);
-	}
-	return $ret;
-}
-
-/**
- * Wrap string definitions (if any) into arrays.
- */
-function wrap_strings_in_arrays(&$strings)
-{
-	if (!is_array($strings))
-		$strings = array(array($strings));
-	else 
-	{
-		foreach ($strings as &$str)
-		{
-			if (!is_array($str))
-				$str = array($str);
-		}
-	}
-	return $strings;
-}
-
 /**
  * Some internal utility functions.
  *
@@ -171,6 +43,128 @@ function wrap_strings_in_arrays(&$strings)
  */
 class Utils
 {
+
+    public static classify($class_name, $singularize=false)
+    {
+        if ($singularize)
+        $class_name = Utils::singularize($class_name);
+
+        $class_name = Inflector::instance()->camelize($class_name);
+        return ucfirst($class_name);
+    }
+
+    // http://snippets.dzone.com/posts/show/4660
+    public static array_flatten(array $array)
+    {
+        $i = 0;
+
+        while ($i < count($array))
+        {
+            if (is_array($array[$i]))
+                array_splice($array,$i,1,$array[$i]);
+            else if (is_object($array[$i])) {
+                $array[$i] = json_encode($array[$i]);
+            }
+            else
+                ++$i;
+        }
+        return $array;
+    }
+
+    /**
+     * Somewhat naive way to determine if an array is a hash.
+     */
+    public static is_hash(&$array)
+    {
+        if (!is_array($array))
+            return false;
+
+        $keys = array_keys($array);
+        return @is_string($keys[0]) ? true : false;
+    }
+
+    /**
+     * Strips a class name of any namespaces and namespace operator.
+     *
+     * @param string $class
+     * @return string stripped class name
+     * @access public
+     */
+    public static denamespace($class_name)
+    {
+        if (is_object($class_name))
+            $class_name = get_class($class_name);
+
+        if (Utils::has_namespace($class_name))
+        {
+            $parts = explode('\\', $class_name);
+            return end($parts);
+        }
+        return $class_name;
+    }
+
+    public static has_namespace($class_name)
+    {
+        if (strpos($class_name, '\\') !== false)
+            return true;
+        return false;
+    }
+
+    public static has_absolute_namespace($class_name)
+    {
+        if (strpos($class_name, '\\') === 0)
+            return true;
+        return false;
+    }
+
+    /**
+     * Returns true if all values in $haystack === $needle
+     * @param $needle
+     * @param $haystack
+     * @return unknown_type
+     */
+    public static all($needle, array $haystack)
+    {
+        foreach ($haystack as $value)
+        {
+            if ($value !== $needle)
+                return false;
+        }
+        return true;
+    }
+
+    public static collect(&$enumerable, $name_or_closure)
+    {
+        $ret = array();
+
+        foreach ($enumerable as $value)
+        {
+            if (is_string($name_or_closure))
+                $ret[] = is_array($value) ? $value[$name_or_closure] : $value->$name_or_closure;
+            elseif ($name_or_closure instanceof Closure)
+                $ret[] = $name_or_closure($value);
+        }
+        return $ret;
+    }
+
+    /**
+     * Wrap string definitions (if any) into arrays.
+     */
+    public static wrap_strings_in_arrays(&$strings)
+    {
+        if (!is_array($strings))
+            $strings = array(array($strings));
+        else
+        {
+            foreach ($strings as &$str)
+            {
+                if (!is_array($str))
+                    $str = array($str);
+            }
+        }
+        return $strings;
+    }
+
 	public static function extract_options($options)
 	{
 		return is_array(end($options)) ? end($options) : array();
@@ -181,11 +175,11 @@ class Utils
 		if (is_array($condition))
 		{
 			if (empty($conditions))
-				$conditions = array_flatten($condition);
+				$conditions = Utils::array_flatten($condition);
 			else
 			{
 				$conditions[0] .= " $conjuction " . array_shift($condition);
-				$conditions[] = array_flatten($condition);
+				$conditions[] = Utils::array_flatten($condition);
 			}
 		}
 		elseif (is_string($condition))
