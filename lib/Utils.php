@@ -41,10 +41,9 @@ use \Closure;
  *
  * @package ActiveRecord
  */
-class Utils
-{
+class Utils {
 
-    public static classify($class_name, $singularize=false)
+    public static function classify($class_name, $singularize=false)
     {
         if ($singularize)
         $class_name = Utils::singularize($class_name);
@@ -54,7 +53,7 @@ class Utils
     }
 
     // http://snippets.dzone.com/posts/show/4660
-    public static array_flatten(array $array)
+    public static function array_flatten(array $array)
     {
         $i = 0;
 
@@ -74,7 +73,7 @@ class Utils
     /**
      * Somewhat naive way to determine if an array is a hash.
      */
-    public static is_hash(&$array)
+    public static function is_hash(&$array)
     {
         if (!is_array($array))
             return false;
@@ -90,7 +89,7 @@ class Utils
      * @return string stripped class name
      * @access public
      */
-    public static denamespace($class_name)
+    public static function denamespace($class_name)
     {
         if (is_object($class_name))
             $class_name = get_class($class_name);
@@ -103,14 +102,14 @@ class Utils
         return $class_name;
     }
 
-    public static has_namespace($class_name)
+    public static function has_namespace($class_name)
     {
         if (strpos($class_name, '\\') !== false)
             return true;
         return false;
     }
 
-    public static has_absolute_namespace($class_name)
+    public static function has_absolute_namespace($class_name)
     {
         if (strpos($class_name, '\\') === 0)
             return true;
@@ -123,7 +122,7 @@ class Utils
      * @param $haystack
      * @return unknown_type
      */
-    public static all($needle, array $haystack)
+    public static function all($needle, array $haystack)
     {
         foreach ($haystack as $value)
         {
@@ -133,7 +132,7 @@ class Utils
         return true;
     }
 
-    public static collect(&$enumerable, $name_or_closure)
+    public static function collect(&$enumerable, $name_or_closure)
     {
         $ret = array();
 
@@ -150,7 +149,7 @@ class Utils
     /**
      * Wrap string definitions (if any) into arrays.
      */
-    public static wrap_strings_in_arrays(&$strings)
+    public static function wrap_strings_in_arrays(&$strings)
     {
         if (!is_array($strings))
             $strings = array(array($strings));
