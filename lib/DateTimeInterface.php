@@ -25,6 +25,9 @@ interface DateTimeInterface
 
 	/**
 	 * Formats the DateTime to the specified format.
+     *
+     * @param string $format A format string accepted by get_format()
+     * @return string formatted date and time string
 	 */
 	public function format($format=null);
 
@@ -32,4 +35,11 @@ interface DateTimeInterface
 	 * See http://php.net/manual/en/datetime.createfromformat.php
 	 */
 	public static function createFromFormat($format, $time, $tz = null);
+
+    /**
+     * Formats the DateTime to the specified JSON format (Y-m-d).
+     *
+     * @return string formatted date string
+     */
+    public function toJsonFormat();
 }
