@@ -638,21 +638,104 @@ class HasOne extends HasMany
  */
 class HasAndBelongsToMany extends AbstractRelationship
 {
-	public function __construct($options=array())
+    protected $join_table;
+    protected $association_foreign_key;
+    protected $association_primary_key;
+
+    public function __construct($options = array())
+    {
+        parent::__construct($options);
+
+        // Définir la table de jointure
+        $this->join_table = isset($options['join_table']) ? $options['join_table'] : $this->infer_join_table();
+
+        // Définir les clés primaires et étrangères
+        $this->primary_key = isset($options['primary_key']) ? $options['primary_key'] : null;
+        $this->foreign_key = isset($options['foreign_key']) ? $options['foreign_key'] : null;
+        $this->association_primary_key = isset($options['association_primary_key']) ? $options['association_primary_key'] : 'id';
+        $this->association_foreign_key = isset($options['association_foreign_key']) ? $options['association_foreign_key'] : Inflector::instance()->keyify($this->class_name);
+
+        if (!$this->class_name) {
+            $this->set_inferred_class_name();
+        }
+    }
+
+    public function load(Model $model)
+    {
+        $this->set_keys(get_class($model));
+
+        $query = $this->construct_query($model);
+
+        $class_name = $this->class_name;
+        return $class_name::find('all', $query);
+    }
+
+    public function load_eagerly($models = array(), $attributes = array(), $includes, Table $table)
+    {
+        $this->set_keys($table->class->name);
+        $this->query_and_attach_related_models_eagerly(
+            $table,
+            $models,
+            $attributes,
+            $includes,
+            $this->foreign_key,
+            $table->pk
+        );
+    }
+
+	protected function construct_query(Model $model)
 	{
-		/* options =>
-		 *   join_table - name of the join table if not in lexical order
-		 *   foreign_key -
-		 *   association_foreign_key - default is {assoc_class}_id
-		 *   uniq - if true duplicate assoc objects will be ignored
-		 *   validate
-		 */
+		$connection = $this->get_table()->conn;
+	
+		// Échapper correctement les noms des tables et colonnes
+		$join_table = $connection->quote_name($this->join_table);
+		$foreign_key = $connection->quote_name($this->foreign_key);
+		$primary_key = $connection->quote_name($this->primary_key);
+		$association_foreign_key = $connection->quote_name($this->association_foreign_key);
+		$association_primary_key = $connection->quote_name($this->association_primary_key);
+	
+		// Utiliser la table associée (departements) comme table principale
+		$primary_table = $this->get_table()->get_fully_qualified_table_name();
+		$origin_table = Table::load(get_class($model))->get_fully_qualified_table_name();
+	
+		// Construire la requête avec deux jointures
+		$query = array(
+			'joins' => "INNER JOIN $join_table ON $join_table.$association_foreign_key = $primary_table.$association_primary_key " .
+					   "INNER JOIN demarchage ON $join_table.$foreign_key = $origin_table.$primary_key",
+			'conditions' => array("$origin_table.$primary_key = ?", $model->id)
+		);
+
+		// Ajouter des conditions supplémentaires si elles sont définies
+		if (isset($this->options['conditions'])) {
+			$query['conditions'] = Utils::add_condition($query['conditions'], $this->options['conditions']);
+		}
+	
+		return $query;
 	}
 
-	public function load(Model $model)
-	{
+    protected function infer_join_table()
+    {
+        $tables = array(
+            Inflector::instance()->tableize($this->attribute_name),
+            Inflector::instance()->tableize($this->class_name)
+        );
 
-	}
+        sort($tables);
+        return implode('_', $tables);
+    }
+
+    protected function set_keys($model_class_name, $override = false)
+    {
+        // Définir la clé étrangère si elle n'est pas déjà définie ou si l'override est activé
+        if (!$this->foreign_key || $override) {
+            $this->foreign_key = Inflector::instance()->keyify($model_class_name);
+        }
+
+        // Définir la clé primaire si elle n'est pas déjà définie ou si l'override est activé
+        if (!$this->primary_key || $override) {
+            $this->primary_key = Table::load($model_class_name)->pk;
+        }
+    }
 }
 
 /**
